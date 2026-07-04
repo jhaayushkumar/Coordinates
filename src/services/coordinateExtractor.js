@@ -1,7 +1,7 @@
-const { extractCoordinatesFromUrl, extractPlaceId, extractPlaceName, isShortUrl } = require('../utils/urlParser');
+const { extractCoordinatesFromUrl, extractPlaceId, extractPlaceName, extractKgmid, isShortUrl } = require('../utils/urlParser');
 const { sanitizeUrl, isValidGoogleUrl } = require('../utils/validators');
 const { expandUrlWithRetry } = require('./urlExpander');
-const { getCoordinatesFromPlaceId, geocodeAddress } = require('./googleMapsAPI');
+const { getCoordinatesFromPlaceId, getCoordinatesFromKgmid, geocodeAddress } = require('./googleMapsAPI');
 const { getFromCache, saveToCache } = require('./cacheService');
 const logger = require('../utils/logger');
 
@@ -61,6 +61,20 @@ const extractCoordinates = async (rawUrl) => {
       }
     } catch (error) {
       logger.warn('Place ID lookup failed, trying next fallback', error);
+    }
+  }
+  
+  // Step 6.5: Fallback to kgmid (knowledge graph ID) extraction + API
+  const kgmid = extractKgmid(finalUrl);
+  if (kgmid) {
+    try {
+      const coords = await getCoordinatesFromKgmid(kgmid);
+      if (coords) {
+        saveToCache(sanitizedUrl, coords);
+        return coords;
+      }
+    } catch (error) {
+      logger.warn('kgmid lookup failed, trying next fallback', error);
     }
   }
   

@@ -58,10 +58,51 @@ const extractPlaceId = (url) => {
 };
 
 /**
+ * Extracts knowledge graph ID (kgmid) from Google Search URLs
+ * This is used when share.google links expand to search URLs
+ */
+const extractKgmid = (url) => {
+  try {
+    // Handle Google CAPTCHA redirects - extract from continue parameter
+    if (url.includes('/sorry/index') && url.includes('continue=')) {
+      const continueMatch = url.match(/continue=([^&]+)/);
+      if (continueMatch) {
+        const continueUrl = decodeURIComponent(continueMatch[1]);
+        const continueUrlObj = new URL(continueUrl, 'https://www.google.com');
+        const kgmid = continueUrlObj.searchParams.get('kgmid');
+        if (kgmid) return kgmid;
+      }
+    }
+    
+    // Normal kgmid extraction
+    const urlObj = new URL(url);
+    const kgmid = urlObj.searchParams.get('kgmid');
+    return kgmid || null;
+  } catch (error) {
+    // Try regex as fallback
+    const kgmidMatch = url.match(/kgmid=([^&]+)/);
+    return kgmidMatch ? decodeURIComponent(kgmidMatch[1]) : null;
+  }
+};
+
+/**
  * Extracts place name from Google Maps URL
  */
 const extractPlaceName = (url) => {
   try {
+    // Handle Google CAPTCHA redirects - extract from continue parameter
+    if (url.includes('/sorry/index') && url.includes('continue=')) {
+      const continueMatch = url.match(/continue=([^&]+)/);
+      if (continueMatch) {
+        const continueUrl = decodeURIComponent(continueMatch[1]);
+        const continueUrlObj = new URL(continueUrl, 'https://www.google.com');
+        const qParam = continueUrlObj.searchParams.get('q');
+        if (qParam && !qParam.match(/^-?\d+\.?\d*,-?\d+\.?\d*$/)) {
+          return qParam;
+        }
+      }
+    }
+    
     const urlObj = new URL(url);
     
     // Check /place/ path
@@ -110,5 +151,6 @@ module.exports = {
   extractCoordinatesFromUrl,
   extractPlaceId,
   extractPlaceName,
+  extractKgmid,
   isShortUrl,
 };

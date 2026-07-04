@@ -3,6 +3,54 @@ const config = require('../config/env');
 const logger = require('../utils/logger');
 
 /**
+ * Gets coordinates from knowledge graph ID (kgmid) using Geocoding API
+ * kgmid can be used as a place_id in geocoding
+ */
+const getCoordinatesFromKgmid = async (kgmid) => {
+  if (!config.googleMapsApiKey) {
+    throw new Error('Google Maps API key not configured');
+  }
+  
+  try {
+    logger.info('Fetching coordinates from kgmid', { kgmid });
+    
+    // Try using kgmid as place_id in geocoding API
+    const response = await axios.get('https://maps.googleapis.com/maps/api/geocode/json', {
+      params: {
+        place_id: kgmid,
+        key: config.googleMapsApiKey,
+      },
+      timeout: config.request.timeout,
+    });
+    
+    if (response.data.status === 'OK' && response.data.results?.[0]?.geometry?.location) {
+      const { lat, lng } = response.data.results[0].geometry.location;
+      
+      logger.info('Coordinates retrieved from kgmid', { kgmid, lat, lng });
+      
+      return {
+        lat,
+        lng,
+        source: 'kgmid_geocoding',
+      };
+    } else {
+      logger.warn('Geocoding API returned no results for kgmid', {
+        kgmid,
+        status: response.data.status,
+      });
+      return null;
+    }
+  } catch (error) {
+    logger.error('Geocoding API error for kgmid', {
+      kgmid,
+      error: error.message,
+    });
+    // Don't throw, let it fallback to next method
+    return null;
+  }
+};
+
+/**
  * Gets coordinates from Place ID using Google Places API
  */
 const getCoordinatesFromPlaceId = async (placeId) => {
@@ -13,38 +61,39 @@ const getCoordinatesFromPlaceId = async (placeId) => {
   try {
     logger.info('Fetching coordinates from Place ID', { placeId });
     
-    const response = await axios.get('https://maps.googleapis.com/maps/api/place/details/json', {
+    // Use Geocoding API with place_id instead of legacy Places API
+    const response = await axios.get('https://maps.googleapis.com/maps/api/geocode/json', {
       params: {
         place_id: placeId,
-        fields: 'geometry',
         key: config.googleMapsApiKey,
       },
       timeout: config.request.timeout,
     });
     
-    if (response.data.status === 'OK' && response.data.result?.geometry?.location) {
-      const { lat, lng } = response.data.result.geometry.location;
+    if (response.data.status === 'OK' && response.data.results?.[0]?.geometry?.location) {
+      const { lat, lng } = response.data.results[0].geometry.location;
       
       logger.info('Coordinates retrieved from Place ID', { placeId, lat, lng });
       
       return {
         lat,
         lng,
-        source: 'place_details_api',
+        source: 'place_id_geocoding',
       };
     } else {
-      logger.warn('Place Details API returned no results', {
+      logger.warn('Geocoding API returned no results for Place ID', {
         placeId,
         status: response.data.status,
       });
       return null;
     }
   } catch (error) {
-    logger.error('Place Details API error', {
+    logger.error('Geocoding API error for Place ID', {
       placeId,
       error: error.message,
     });
-    throw error;
+    // Don't throw, let it fallback to next method
+    return null;
   }
 };
 
@@ -104,44 +153,44 @@ const searchPlace = async (query) => {
   try {
     logger.info('Searching for place', { query });
     
-    const response = await axios.get('https://maps.googleapis.com/maps/api/place/findplacefromtext/json', {
+    // Use geocoding API for place search
+    const response = await axios.get('https://maps.googleapis.com/maps/api/geocode/json', {
       params: {
-        input: query,
-        inputtype: 'textquery',
-        fields: 'geometry',
+        address: query,
         key: config.googleMapsApiKey,
       },
       timeout: config.request.timeout,
     });
     
-    if (response.data.status === 'OK' && response.data.candidates?.[0]?.geometry?.location) {
-      const { lat, lng } = response.data.candidates[0].geometry.location;
+    if (response.data.status === 'OK' && response.data.results?.[0]?.geometry?.location) {
+      const { lat, lng } = response.data.results[0].geometry.location;
       
       logger.info('Place found successfully', { query, lat, lng });
       
       return {
         lat,
         lng,
-        source: 'place_search_api',
+        source: 'place_search_geocoding',
       };
     } else {
-      logger.warn('Place Search API returned no results', {
+      logger.warn('Geocoding API returned no results for search', {
         query,
         status: response.data.status,
       });
       return null;
     }
   } catch (error) {
-    logger.error('Place Search API error', {
+    logger.error('Geocoding API error for search', {
       query,
       error: error.message,
     });
-    throw error;
+    return null;
   }
 };
 
 module.exports = {
   getCoordinatesFromPlaceId,
+  getCoordinatesFromKgmid,
   geocodeAddress,
   searchPlace,
 };
