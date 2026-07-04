@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Maps Coordinate Extractor</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📍 Google Maps Coordinate Extractor</h1>
+            <p>Paste any Google Maps share link to extract coordinates</p>
+        </header>
+
+        <div class="card">
+            <form id="extractForm">
+                <div class="form-group">
+                    <label for="urlInput">Google Maps URL</label>
+                    <input 
+                        type="text" 
+                        id="urlInput" 
+                        name="url" 
+                        placeholder="https://share.google/9xuXQOOJ7kyVJG2Fz"
+                        required
+                    >
+                </div>
+                
+                <button type="submit" id="submitBtn" class="btn-primary">
+                    Extract Coordinates
+                </button>
+            </form>
+
+            <div id="loading" class="loading hidden">
+                <div class="spinner"></div>
+                <p>Processing URL...</p>
+            </div>
+
+            <div id="result" class="result hidden"></div>
+        </div>
+
+        <div class="examples">
+            <h3>✅ Test with these working URLs:</h3>
+            <div class="test-urls">
+                <button class="test-btn" onclick="testUrl('https://www.google.com/maps/@28.6139,77.2090,15z')">
+                    Test #1: India Gate
+                </button>
+                <button class="test-btn" onclick="testUrl('https://www.google.com/maps/place/Taj+Mahal/@27.1751,78.0421,17z')">
+                    Test #2: Taj Mahal
+                </button>
+                <button class="test-btn" onclick="testUrl('https://www.google.com/maps?q=19.0760,72.8777')">
+                    Test #3: Mumbai
+                </button>
+            </div>
+            
+            <h3 style="margin-top: 20px;">Supported URL Formats:</h3>
+            <ul>
+                <li><code>https://www.google.com/maps/@lat,lng,zoom</code> ✅ Works without API</li>
+                <li><code>https://www.google.com/maps/place/Name/@lat,lng</code> ✅ Works without API</li>
+                <li><code>https://www.google.com/maps?q=lat,lng</code> ✅ Works without API</li>
+                <li><code>https://share.google/xxxxx</code> ⚠️ Depends on what it expands to</li>
+                <li><code>https://maps.app.goo.gl/xxxxx</code> ⚠️ Depends on what it expands to</li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
